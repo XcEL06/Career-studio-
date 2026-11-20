@@ -626,8 +626,45 @@ function buildOwner(mode,A){
   var f=el('div',{class:'adm-f'});f.innerHTML='<b>Custom CSS (styles)</b><textarea id="c-css" rows="6" placeholder=".btn{border-radius:8px}"></textarea><b>Custom JavaScript (new functions)</b><textarea id="c-js" rows="8" placeholder="Runs on every page load. Only paste code you trust."></textarea><b>Add to the head (analytics, chat widgets, verification tags)</b><textarea id="c-hd" rows="5" placeholder="&lt;script src=…&gt;&lt;/script&gt;"></textarea><p class="hint">Everything here is saved with the site and applied for every visitor after you press Save. Test after saving. Reset in the Save tab undoes all of it.</p>';
   body.append(f);var c=f.querySelector('#c-css'),j=f.querySelector('#c-js'),h=f.querySelector('#c-hd');c.value=CUSTOM.css;j.value=CUSTOM.js;h.value=CUSTOM.head;
   c.addEventListener('input',function(){CUSTOM.css=c.value;setCss()});j.addEventListener('input',function(){CUSTOM.js=j.value});h.addEventListener('input',function(){CUSTOM.head=h.value})};
+ R.AI=function(){
+  var cv=document.querySelector('[data-view].on');
+  if(!cv){body.append(note('Open a page first, then come back to this tab.'));return}
+  body.append(note('Describe the change in plain English. You will see a preview before anything goes live.'));
+  var sel=el('select'),ta=el('textarea',{rows:'4',placeholder:'e.g. Make this intro shorter and mention executives'}),st=el('p',{class:'hint',role:'status'});
+  ta.style.minHeight='90px';
+  cv.querySelectorAll(':scope>section').forEach(function(s,i){
+    var l=((s.querySelector('h1,h2')||{}).textContent||'Section '+(i+1)).slice(0,40);
+    sel.append(el('option',{value:i,text:l}))
+  });
+  body.append(sel,ta,btn('Preview change',function(){run()},'go'),st);
+  var undo=null,undoBtn=null;
+  function run(){
+    var sec=cv.querySelectorAll(':scope>section')[+sel.value];if(!sec)return;
+    var before=sec.innerHTML;st.textContent='Working…';
+    fetch(SB_URL+'/functions/v1/admin-ai',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},body:JSON.stringify({action:'edit',pw:PW,instruction:ta.value,html:before})})
+     .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'AI edit failed');return d})})
+     .then(function(d){
+       var out=(d.html||'').trim();if(!out)throw new Error('The AI returned an empty edit.');
+       if(/<script|on\\w+\\s*=/i.test(out))throw new Error('The returned HTML did not pass the safety check.');
+       undo={sec:sec,html:before};sec.innerHTML=out;st.textContent='Preview applied. Check it, then tap Save in the Save tab.';
+       if(!undoBtn){undoBtn=btn('Undo preview',function(){if(undo){undo.sec.innerHTML=undo.html;st.textContent='Preview reverted.';undo=null}});body.append(undoBtn)}
+     }).catch(function(e){st.textContent='AI edit failed: '+e.message});
+  }
+ };
  R.Save=function(){var st=el('p',{class:'hint',role:'status'});
-  if(mode==='site'){body.append(note('Saving publishes every change here for all visitors.'),btn('Save changes',function(){saveSite(st)},'go'),btn('Reset to the original site',function(){if(confirm('Remove all saved edits and return to the original site?'))rpc('admin_save_settings',{s:{}}).then(function(){location.hash='';location.reload()})}),btn('Sign out',function(){PW='';root.remove();document.body.classList.remove('adm-on')}),st)}
+  if(mode==='site'){body.append(note('Saving publishes every change here for all visitors.'),btn('Save changes',function(){saveSite(st)},'go'),btn('Reset to the original site',function(){if(confirm('Remove all saved edits and return to the original site?'))rpc('admin_save_settings',{s:{}}).then(function(){location.hash='';location.reload()})}),btn('Sign out',function(){PW='';root.remove();document.body.classList.remove('adm-on')}),st);
+   var kf=el('div',{class:'adm-f'}),ki=el('input',{type:'password',placeholder:'sk-...',autocomplete:'off'}),ks=el('p',{class:'hint',role:'status',text:'Your key is stored server-side and is never sent back to this page.'});
+   var kb=btn('Save OpenAI key',function(){
+    var k=ki.value.trim();if(!k){ks.textContent='Paste your OpenAI API key first.';return}
+    kb.disabled=true;ks.textContent='Saving securely…';
+    fetch(SB_URL+'/functions/v1/admin-ai',{method:'POST',headers:{'Content-Type':'application/json',apikey:SB_KEY,Authorization:'Bearer '+SB_KEY},body:JSON.stringify({action:'save_key',pw:PW,key:k})})
+     .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'Could not save key');return d})})
+     .then(function(){ki.value='';ks.textContent='OpenAI key saved securely.'})
+     .catch(function(e){ks.textContent='Could not save key: '+e.message})
+     .finally(function(){kb.disabled=false});
+   },'go');
+   kf.append(el('b',{text:'AI editing key (OpenAI)'}),ki,kb,ks);body.append(kf)}
+  else body.append(note('Publishing makes every change here live for all visitors.'),btn('Publish changes',function(){publish(st)},'go'),st)};
   else body.append(note('Publishing makes every change here live for all visitors.'),btn('Publish changes',function(){publish(st)},'go'),st)};
  var ITEMS='.rows>li,.cols>div,.steps>li,.shifts>.shift,.smp,.strip .wrap>div,.chk>li,.next>li,.pills>span';
  var EDITS='main :is(h1,h2,h3,h4,h5,p,dt,dd,small,s,li,.quote),main .shift>div,footer :is(p,h3)';
