@@ -645,7 +645,7 @@ function buildOwner(mode,A){
      .then(function(r){return r.json().then(function(d){if(!r.ok)throw new Error(d.error||'AI edit failed');return d})})
      .then(function(d){
        var out=(d.html||'').trim();if(!out)throw new Error('The AI returned an empty edit.');
-       if(/<script|on\\w+\\s*=/i.test(out))throw new Error('The returned HTML did not pass the safety check.');
+       if(/<script|on\w+\s*=/i.test(out))throw new Error('The returned HTML did not pass the safety check.');
        undo={sec:sec,html:before};sec.innerHTML=out;st.textContent='Preview applied. Check it, then tap Save in the Save tab.';
        if(!undoBtn){undoBtn=btn('Undo preview',function(){if(undo){undo.sec.innerHTML=undo.html;st.textContent='Preview reverted.';undo=null}});body.append(undoBtn)}
      }).catch(function(e){st.textContent='AI edit failed: '+e.message});
