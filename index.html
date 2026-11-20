@@ -551,7 +551,7 @@ function applyRemote(d){
 document.addEventListener('submit',function(e){var f=e.target;if(f.id!=='adm-login')return;e.preventDefault();var m=document.getElementById('adm-msg');
  if(!SB_URL){m.textContent='Admin needs the Supabase connection set up first (see supabase-setup.sql).';return}
  PW=f.pw.value;m.textContent='Checking…';
- rpc('admin_list_reviews',{}).then(function(){m.textContent='';f.reset();buildOwner('site');location.hash='#home'}).catch(function(){PW='';m.textContent='Wrong password, or the connection failed.'})});
+ rpc('admin_list_reviews',{}).then(function(){m.textContent='';f.reset();try{buildOwner('site')}catch(err){console.error('buildOwner failed:',err);m.textContent='Signed in, but the panel failed: '+err.message;return}location.hash='#home'}).catch(function(){PW='';m.textContent='Wrong password, or the connection failed.'})});
 
 
 /* owner tools: on the Claude link for the signed-in owner, and on the deployed site after /admin sign-in */
@@ -654,7 +654,7 @@ function buildOwner(mode,A){
   var html='<!DOCTYPE html>\n'+c.outerHTML;if(E!==E0)html=html.split(E0).join(E);
   try{await A.publish(html);st.textContent='Published.'}catch(e){st.textContent=e&&e.code==='conflict'?'The page was updated elsewhere and has reloaded. Please repeat your change.':'Could not publish ('+((e&&e.code)||'error')+').'}}
  var editBtn=btn('Edit text: Off',function(){setEdit(!editing)});
- ['Features','Pages','Add','Reviews','Look','Code','Save'].forEach(function(n){tabs.append(btn(n,function(){tab(n)}))});
+ ['Features','Pages','Add','Reviews','AI','Look','Code','Save'].forEach(function(n){tabs.append(btn(n,function(){tab(n)}))});
  panel.append(el('h4',{text:'Owner settings'}),note('Only you can see this. Tap Edit text, then tap any text to change it. Use the ↑ ↓ ⧉ ✕ buttons on items.'),editBtn,tabs,body);
  var fab=btn('Owner settings',function(){panel.hidden=!panel.hidden});fab.className='adm-fab';
  root.append(panel,fab);document.body.append(root);tab('Features');
